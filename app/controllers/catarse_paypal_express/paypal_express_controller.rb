@@ -36,8 +36,7 @@ class CatarsePaypalExpress::PaypalExpressController < ApplicationController
       })
 
       process_paypal_message response.params
-      #contribution.update_attributes payment_method: 'PayPal', payment_token: response.token
-
+      contribution.payments.create(gateway_data: {token: response.token}, payment_method: "PayPal", gateway: "PayPal")
       redirect_to gateway.redirect_url_for(response.token)
     rescue Exception => e
       Rails.logger.info "-----> #{e.inspect}"
@@ -50,13 +49,12 @@ class CatarsePaypalExpress::PaypalExpressController < ApplicationController
     begin
       purchase = gateway.purchase(contribution.price_in_cents, {
         ip: request.remote_ip,
-        token: contribution.payment_token,
+        token: payment.gateway_data['token'],
         payer_id: params[:PayerID]
       })
 
       # we must get the deatils after the purchase in order to get the transaction_id
       process_paypal_message purchase.params
-      contribution.update_attributes payment_id: purchase.params['transaction_id'] if purchase.params['transaction_id']
 
       flash[:success] = t('success', scope: SCOPE)
       redirect_to main_app.project_contribution_path(project_id: contribution.project.id, id: contribution.id)
@@ -74,10 +72,14 @@ class CatarsePaypalExpress::PaypalExpressController < ApplicationController
 
   def contribution
     @contribution ||= if params['id']
-                  PaymentEngines.find_contribution(params['id'])
-                elsif params['txn_id']
-                  PaymentEngines.find_payment(payment_id: params['txn_id']) || (params['parent_txn_id'] && PaymentEngines.find_payment(payment_id: params['parent_txn_id']))
-                end
+      PaymentEngines.find_contribution(params['id'])
+    end
+  end
+
+  def payment
+    @payment ||= if params['token']
+      Payment.where("gateway_data->>'token' = ?", params['token']).first
+    end
   end
 
   def process_paypal_message(data)
@@ -89,7 +91,7 @@ class CatarsePaypalExpress::PaypalExpressController < ApplicationController
     elsif data["payment_status"]
       case data["payment_status"].downcase
       when 'completed'
-        contribution.confirm!
+        payment.pay!
       when 'refunded'
         contribution.refund!
       when 'canceled_reversal'
