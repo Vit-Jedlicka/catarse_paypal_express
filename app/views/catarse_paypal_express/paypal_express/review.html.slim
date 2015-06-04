@@ -3,9 +3,7 @@
 #catarse_paypal_express_form
   = form_tag pay_paypal_express_path(params[:id]) do
     .w-row
-      .w-col.w-col-6
-        = label_tag 'user_document', t('projects.contributions.review.international.user_document_label'), class: 'field-label fontweight-semibold'
-        = text_field_tag 'user_document', nil, { autocomplete: 'off', class: 'w-input text-field', data: {mask: '999.999.999-99'} }
+      .w-col.w-col-12 Currently, we support only payments through PayPal.
     .w-row
       .w-col.w-col-12
         .card.card-message.fontsize-small.u-radius.zindex-10.u-marginbottom-30 = t('projects.contributions.review.international.section_title')
