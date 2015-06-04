@@ -31,12 +31,12 @@ class CatarsePaypalExpress::PaypalExpressController < ApplicationController
         return_url: success_paypal_express_url(id: contribution.id),
         cancel_return_url: cancel_paypal_express_url(id: contribution.id),
         currency_code: 'USD',
-        description: t('paypal_description', scope: SCOPE, :project_name => contribution.project.name, :value => contribution.display_value),
+        description: t('paypal_description', scope: SCOPE, :project_name => contribution.project.name, :value => contribution.value),
         notify_url: ipn_paypal_express_index_url(subdomain: 'www')
       })
 
       process_paypal_message response.params
-      contribution.update_attributes payment_method: 'PayPal', payment_token: response.token
+      #contribution.update_attributes payment_method: 'PayPal', payment_token: response.token
 
       redirect_to gateway.redirect_url_for(response.token)
     rescue Exception => e
@@ -74,7 +74,7 @@ class CatarsePaypalExpress::PaypalExpressController < ApplicationController
 
   def contribution
     @contribution ||= if params['id']
-                  PaymentEngines.find_payment(id: params['id'])
+                  PaymentEngines.find_contribution(params['id'])
                 elsif params['txn_id']
                   PaymentEngines.find_payment(payment_id: params['txn_id']) || (params['parent_txn_id'] && PaymentEngines.find_payment(payment_id: params['parent_txn_id']))
                 end
